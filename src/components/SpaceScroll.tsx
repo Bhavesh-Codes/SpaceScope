@@ -9,7 +9,11 @@ const FRAME_COUNT = 240;
 export default function SpaceScroll() {
     const containerRef = useRef<HTMLDivElement>(null);
     const canvasRef = useRef<HTMLCanvasElement>(null);
-    const [images, setImages] = useState<HTMLImageElement[]>([]);
+
+    // Optimization: Store images in Ref to avoid React re-renders on every frame access
+    // This detaches the large image array from React's state management
+    const imagesRef = useRef<HTMLImageElement[]>([]);
+
     const [loadedCount, setLoadedCount] = useState(0);
     const [isLoading, setIsLoading] = useState(true);
 
@@ -23,16 +27,9 @@ export default function SpaceScroll() {
     const currentIndex = useTransform(scrollYProgress, [0, 1], [0, FRAME_COUNT - 1]);
 
     // Text Opacity Transforms
-    // 0% -> Fade Out early
     const opacityText1 = useTransform(scrollYProgress, [0, 0.15], [1, 0]);
-
-    // 25% -> Fade In then Out
     const opacityText2 = useTransform(scrollYProgress, [0.15, 0.25, 0.35], [0, 1, 0]);
-
-    // 50% -> Fade In then Out
     const opacityText3 = useTransform(scrollYProgress, [0.40, 0.50, 0.60], [0, 1, 0]);
-
-    // 75% -> Fade In then Out
     const opacityText4 = useTransform(scrollYProgress, [0.65, 0.75, 0.85], [0, 1, 0]);
 
     // HUD: Appear at very end
@@ -42,11 +39,14 @@ export default function SpaceScroll() {
     // Preload Images
     useEffect(() => {
         const loadedImages: HTMLImageElement[] = [];
+        // Initialize array with explicit size to preserve order
+        for (let i = 0; i < FRAME_COUNT; i++) loadedImages.push(null as any);
+
         let loadCounter = 0;
 
         const onImageLoadOrError = () => {
             loadCounter++;
-            setLoadedCount(prev => prev + 1); // Use functional update for safety
+            setLoadedCount(prev => prev + 1);
             if (loadCounter >= FRAME_COUNT) {
                 setIsLoading(false);
             }
@@ -54,62 +54,71 @@ export default function SpaceScroll() {
 
         for (let i = 0; i < FRAME_COUNT; i++) {
             const img = new Image();
-            // Pad index with zeros: 001, 002, ... 300
             const frameStr = (i + 1).toString().padStart(3, '0');
             img.src = `/sequence/ezgif-frame-${frameStr}.jpg`;
 
-            img.onload = onImageLoadOrError;
+            img.onload = () => {
+                loadedImages[i] = img; // Ensure correct index
+                onImageLoadOrError();
+            };
             img.onerror = onImageLoadOrError;
-
-            loadedImages.push(img);
         }
-        setImages(loadedImages);
+        imagesRef.current = loadedImages;
     }, []);
 
-    // Draw to Canvas
+    // Optimized Render Function
     const renderFrame = (index: number) => {
         const canvas = canvasRef.current;
         if (!canvas) return;
-        const ctx = canvas.getContext('2d');
+        const ctx = canvas.getContext('2d', { alpha: false }); // Optimize for no transparency
         if (!ctx) return;
 
-        // Ensure resizing to full screen
-        if (canvas.width !== window.innerWidth || canvas.height !== window.innerHeight) {
-            canvas.width = window.innerWidth;
-            canvas.height = window.innerHeight;
-        }
-
+        // Calculate frame index safely
         const frameIndex = Math.min(FRAME_COUNT - 1, Math.max(0, Math.floor(index)));
-        const img = images[frameIndex];
+        const img = imagesRef.current[frameIndex];
 
-        // Clear canvas always
-        ctx.fillStyle = '#000000';
-        ctx.fillRect(0, 0, canvas.width, canvas.height); // Black background default
+        if (img instanceof HTMLImageElement && img.complete && img.naturalWidth > 0) {
+            ctx.imageSmoothingEnabled = true;
+            ctx.imageSmoothingQuality = 'medium';
 
-        if (img && img.complete && img.naturalWidth > 0) {
             // Object-fit: cover logic
-            const hRatio = canvas.width / img.width;
-            const vRatio = canvas.height / img.height;
+            const canvasWidth = canvas.width;
+            const canvasHeight = canvas.height;
+            const imgWidth = img.width;
+            const imgHeight = img.height;
+
+            const hRatio = canvasWidth / imgWidth;
+            const vRatio = canvasHeight / imgHeight;
             const ratio = Math.max(hRatio, vRatio);
 
-            const centerShift_x = (canvas.width - img.width * ratio) / 2;
-            const centerShift_y = (canvas.height - img.height * ratio) / 2;
+            const centerShift_x = (canvasWidth - imgWidth * ratio) / 2;
+            const centerShift_y = (canvasHeight - imgHeight * ratio) / 2;
 
+            // Performance: Only draw if necessary, and use fast draw
             ctx.drawImage(img,
-                0, 0, img.width, img.height,
-                centerShift_x, centerShift_y, img.width * ratio, img.height * ratio
+                0, 0, imgWidth, imgHeight,
+                centerShift_x, centerShift_y, imgWidth * ratio, imgHeight * ratio
             );
-        } else {
-            // Fallback rendering if image missing (for debugging/development)
-            ctx.fillStyle = '#0b0d17';
-            ctx.fillRect(0, 0, canvas.width, canvas.height);
-            ctx.fillStyle = '#1e293b';
-            ctx.font = '20px monospace';
-            ctx.textAlign = 'center';
-            ctx.fillText(`Frame ${frameIndex + 1} / ${FRAME_COUNT}`, canvas.width / 2, canvas.height / 2);
-            ctx.fillText(`(Place images in public/sequence/frame_XXX.jpg)`, canvas.width / 2, canvas.height / 2 + 30);
         }
     };
+
+    // Handle Resize Explicitly
+    useEffect(() => {
+        const handleResize = () => {
+            if (canvasRef.current) {
+                canvasRef.current.width = window.innerWidth;
+                canvasRef.current.height = window.innerHeight;
+                // Re-render current frame after resize
+                renderFrame(currentIndex.get());
+            }
+        };
+
+        // Set initial size
+        handleResize();
+
+        window.addEventListener('resize', handleResize);
+        return () => window.removeEventListener('resize', handleResize);
+    }, []);
 
     // Subscribe to scroll changes to render frames
     useMotionValueEvent(currentIndex, "change", (latest) => {
@@ -118,24 +127,12 @@ export default function SpaceScroll() {
         }
     });
 
-    // Initial render when loading finishes or window resizes
-    useEffect(() => {
-        const handleResize = () => {
-            if (!isLoading) renderFrame(currentIndex.get());
-        };
-
-        window.addEventListener('resize', handleResize);
-        if (!isLoading) renderFrame(currentIndex.get());
-
-        return () => window.removeEventListener('resize', handleResize);
-    }, [isLoading, currentIndex]); // Add dependencies
-
     // Prevent scrolling while loading
     useEffect(() => {
         if (isLoading) {
             document.body.style.overflow = 'hidden';
         } else {
-            document.body.style.overflow = 'auto'; // or ''
+            document.body.style.overflow = 'auto';
         }
         return () => { document.body.style.overflow = 'auto'; }
     }, [isLoading]);
