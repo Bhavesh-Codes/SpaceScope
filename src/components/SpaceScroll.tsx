@@ -246,7 +246,10 @@ function OrbitalHUD() {
                 {buttons.map((btn, i) => (
                     <button
                         key={i}
-                        onClick={() => { if (btn.label === 'Missions') window.location.href = '/missions'; }}
+                        onClick={() => {
+                            if (btn.label === 'Missions') window.location.href = '/missions';
+                            if (btn.label === 'Earth Impact') window.location.href = '/earth-impact';
+                        }}
                         className={`group relative flex flex-col items-center justify-center w-full sm:w-[200px] h-[280px] rounded-[2rem] border ${btn.border} bg-slate-900/40 backdrop-blur-xl transition-all duration-500 hover:scale-105 hover:-translate-y-2 hover:shadow-2xl ${btn.shadow} ${btn.bg} overflow-hidden`}
                     >
                         {/* Internal Gradient */}
