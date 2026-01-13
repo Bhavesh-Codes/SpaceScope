@@ -8,6 +8,10 @@ module.exports = {
   theme: {
     extend: {
       fontFamily: {
+        // This is the new line you need:
+        lemon: ['var(--font-lemon-milk)', 'sans-serif'],
+        
+        // Keeping your existing fonts
         orbitron: ['var(--font-orbitron)', 'sans-serif'],
         inter: ['var(--font-inter)', 'sans-serif'],
       },

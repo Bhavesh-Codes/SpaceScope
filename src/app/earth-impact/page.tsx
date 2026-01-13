@@ -9,14 +9,20 @@ import { AirQualitySection } from '@/components/earth-impact/AirQualitySection';
 export default function EarthImpactPage() {
     return (
         <main className="min-h-screen bg-black text-white p-6 relative overflow-hidden font-sans">
+            
+            {/* 1. FIXED RETURN BUTTON */}
+            <Link 
+                href="/?menu=open" 
+                className="fixed top-6 left-6 z-50 text-cyan-400/80 hover:text-cyan-300 inline-flex items-center gap-2 transition-colors text-sm uppercase tracking-widest border border-cyan-500/30 px-4 py-2 rounded-full hover:bg-cyan-500/10 backdrop-blur-md bg-black/20"
+            >
+                &larr; 
+            </Link>
+
             {/* Background Ambience */}
             <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-blue-900/40 via-black to-black -z-10 pointer-events-none" />
             <div className="absolute inset-0 bg-[url('/assets/noise.png')] opacity-[0.03] pointer-events-none" />
 
             <header className="mb-16 z-10 relative max-w-4xl mx-auto text-center pt-10">
-                <Link href="/" className="text-cyan-400/80 hover:text-cyan-300 mb-6 inline-flex items-center gap-2 transition-colors text-sm uppercase tracking-widest border border-cyan-500/30 px-4 py-2 rounded-full hover:bg-cyan-500/10">
-                    &larr; Return to Orbit
-                </Link>
                 <h1 className="text-5xl md:text-7xl font-bold bg-clip-text text-transparent bg-gradient-to-br from-white via-cyan-100 to-blue-500 font-orbitron tracking-tight mb-6 drop-shadow-[0_0_30px_rgba(6,182,212,0.3)]">
                     Earth Impact
                 </h1>

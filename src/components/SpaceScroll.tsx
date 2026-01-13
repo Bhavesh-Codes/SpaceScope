@@ -4,6 +4,7 @@ import React, { useRef, useEffect, useState } from 'react';
 import { useScroll, useTransform, useMotionValueEvent, motion, AnimatePresence } from 'framer-motion';
 import { Rocket, Globe, Zap, BookOpen, AlertTriangle, ChevronDown } from 'lucide-react';
 import KineticHeader from './missions/KineticHeader';
+import { useSearchParams } from 'next/navigation';
 
 const FRAME_COUNT = 240;
 
@@ -36,6 +37,21 @@ export default function SpaceScroll() {
     // HUD: Appear at very end
     const opacityHUD = useTransform(scrollYProgress, [0.95, 0.99], [0, 1]);
     const pointerEventsHUD = useTransform(scrollYProgress, (v) => v > 0.98 ? 'auto' : 'none');
+
+    useEffect(() => {
+        // Only run this logic once the loading screen is gone
+        if (!isLoading) {
+            // Check if URL has ?menu=open
+            const params = new URLSearchParams(window.location.search);
+            if (params.get('menu') === 'open') {
+                // Scroll instantly to the bottom where the HUD is
+                window.scrollTo({
+                    top: document.body.scrollHeight,
+                    behavior: 'instant' 
+                });
+            }
+        }
+    }, [isLoading]);
 
     // Preload Images
     useEffect(() => {
@@ -249,6 +265,9 @@ function OrbitalHUD() {
                         onClick={() => {
                             if (btn.label === 'Missions') window.location.href = '/missions';
                             if (btn.label === 'Earth Impact') window.location.href = '/earth-impact';
+                            if (btn.label === 'Cosmic Weather') window.location.href = '/cosmic-weather';
+                            if (btn.label === 'Learning Zone') window.location.href = '/quiz';
+                            if (btn.label === 'Celestial Events') window.location.href = '/celestial-events';
                         }}
                         className={`group relative flex flex-col items-center justify-center w-full sm:w-[200px] h-[280px] rounded-[2rem] border ${btn.border} bg-slate-900/40 backdrop-blur-xl transition-all duration-500 hover:scale-105 hover:-translate-y-2 hover:shadow-2xl ${btn.shadow} ${btn.bg} overflow-hidden`}
                     >

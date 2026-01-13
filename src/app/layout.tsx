@@ -2,6 +2,7 @@ import './globals.css';
 import React from 'react';
 import { Inter, Orbitron } from 'next/font/google';
 
+
 const inter = Inter({
   subsets: ['latin'],
   variable: '--font-inter',

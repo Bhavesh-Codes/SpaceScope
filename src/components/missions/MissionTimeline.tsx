@@ -20,6 +20,12 @@ export default function MissionTimeline() {
     return (
         <div className="relative z-10 w-full pb-32">
 
+            <div className="fixed top-6 left-6 z-50">
+    
+        
+    
+</div>
+
             {/* Intro Section */}
             <section className="min-h-screen flex flex-col items-center justify-center p-4">
                 <KineticHeader text="Cosmic Archive" subtext="The History of Exploration" />
@@ -54,11 +60,7 @@ export default function MissionTimeline() {
             </section>
 
             {/* Footer / Back Navigation */}
-            <div className="text-center mt-32">
-                <a href="/" className="inline-block px-8 py-3 rounded-full border border-cyan-500/50 text-cyan-400 font-orbitron tracking-widest hover:bg-cyan-500/10 transition-colors uppercase">
-                    Return to Orbit
-                </a>
-            </div>
+            
 
         </div>
     );
