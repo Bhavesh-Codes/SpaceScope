@@ -20,11 +20,33 @@ interface PausedSession {
   timestamp: number;
 }
 
-interface SavedProgress {
+// Progress for a single difficulty
+interface DifficultyProgress {
   unlockedLevelIds: number[];
   completedLevelIds: number[];
   pausedSession: PausedSession | null;
 }
+
+// All progress keyed by difficulty
+interface SavedProgress {
+  EASY: DifficultyProgress;
+  MEDIUM: DifficultyProgress;
+  HARD: DifficultyProgress;
+}
+
+// Default progress for new difficulty
+const getDefaultDifficultyProgress = (): DifficultyProgress => ({
+  unlockedLevelIds: [1],
+  completedLevelIds: [],
+  pausedSession: null
+});
+
+// Default full progress
+const getDefaultProgress = (): SavedProgress => ({
+  EASY: getDefaultDifficultyProgress(),
+  MEDIUM: getDefaultDifficultyProgress(),
+  HARD: getDefaultDifficultyProgress()
+});
 
 // --- LINKED LIST LOGIC (Updated for State) ---
 class QuizNode {
@@ -43,16 +65,16 @@ class QuizNode {
 class QuizLinkedList {
   head: QuizNode | null = null;
 
-  constructor(levels: any[], progress: SavedProgress) {
+  constructor(levels: any[], progress: DifficultyProgress) {
     if (levels.length === 0) return;
 
     // Initialize Level 1
     const isL1Unlocked = progress.unlockedLevelIds.includes(1);
     const isL1Complete = progress.completedLevelIds.includes(1);
-    
+
     // Level 1 is always unlocked by default if nothing is saved, otherwise follow save
-    this.head = new QuizNode(levels[0], true, isL1Complete); 
-    
+    this.head = new QuizNode(levels[0], true, isL1Complete);
+
     let current = this.head;
 
     // Chain the rest
@@ -353,37 +375,61 @@ export default function CosmicQuiz({ onBack }: { onBack: () => void }) {
   const [gameState, setGameState] = useState<'DIFFICULTY_SELECT' | 'MAP' | 'PLAYING' | 'RESULT'>('DIFFICULTY_SELECT');
   const [difficulty, setDifficulty] = useState<Difficulty>('EASY');
   const [currentLevelId, setCurrentLevelId] = useState<number>(1);
-  
-  // Persistence State
-  const [savedProgress, setSavedProgress] = useState<SavedProgress>({
-    unlockedLevelIds: [1],
-    completedLevelIds: [],
-    pausedSession: null
-  });
+
+  // Persistence State - per difficulty
+  const [savedProgress, setSavedProgress] = useState<SavedProgress>(getDefaultProgress);
+  const [isLoaded, setIsLoaded] = useState(false);
 
   // Gameplay State
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [score, setScore] = useState(0);
   const [selectedOption, setSelectedOption] = useState<number | null>(null);
   const [isAnswerRevealed, setIsAnswerRevealed] = useState(false);
+  const [shuffledQuestions, setShuffledQuestions] = useState<any[]>([]);
+
+  // Helper to get current difficulty's progress
+  const currentProgress = savedProgress[difficulty];
+
+  // Fisher-Yates shuffle for randomizing questions
+  const shuffleArray = <T,>(array: T[]): T[] => {
+    const shuffled = [...array];
+    for (let i = shuffled.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+    }
+    return shuffled;
+  };
 
   // Load from LocalStorage on Mount
   useEffect(() => {
-    const saved = localStorage.getItem('orbital_academy_progress');
+    const saved = localStorage.getItem('orbital_academy_progress_v2');
     if (saved) {
-      setSavedProgress(JSON.parse(saved));
+      try {
+        const parsed = JSON.parse(saved);
+        // Validate structure has all difficulties
+        if (parsed.EASY && parsed.MEDIUM && parsed.HARD) {
+          setSavedProgress(parsed);
+        }
+      } catch {
+        // Invalid data, use default
+      }
     }
+    setIsLoaded(true); // Mark as loaded AFTER attempting to load
   }, []);
 
-  // Save to LocalStorage whenever progress changes
+  // Save to LocalStorage whenever progress changes (only after initial load)
   useEffect(() => {
-    localStorage.setItem('orbital_academy_progress', JSON.stringify(savedProgress));
-  }, [savedProgress]);
+    if (isLoaded) {
+      localStorage.setItem('orbital_academy_progress_v2', JSON.stringify(savedProgress));
+    }
+  }, [savedProgress, isLoaded]);
 
-  // Re-build Linked List whenever progress changes
-  const quizList = useMemo(() => new QuizLinkedList(QUIZ_DATA, savedProgress), [savedProgress]);
+  // Re-build Linked List based on current difficulty's progress
+  const quizList = useMemo(() => new QuizLinkedList(QUIZ_DATA, currentProgress), [currentProgress]);
   const currentLevelNode = useMemo(() => quizList.find(currentLevelId), [currentLevelId, quizList]);
-  const activeQuestions = currentLevelNode?.data.questions[difficulty] || [];
+  const baseQuestions = currentLevelNode?.data.questions[difficulty] || [];
+  // Use shuffled questions if available, otherwise use base
+  const activeQuestions = shuffledQuestions.length > 0 ? shuffledQuestions : baseQuestions;
   const nodes = quizList.toArray();
 
   // --- ACTIONS ---
@@ -398,21 +444,23 @@ export default function CosmicQuiz({ onBack }: { onBack: () => void }) {
     if (!node?.isUnlocked) return;
 
     setCurrentLevelId(id);
+    const levelQuestions = node.data.questions[difficulty] || [];
 
-    // Check for paused session
-    if (savedProgress.pausedSession && savedProgress.pausedSession.levelId === id) {
-      // RESUME
-      const session = savedProgress.pausedSession;
+    // Check for paused session in current difficulty
+    if (currentProgress.pausedSession && currentProgress.pausedSession.levelId === id) {
+      // RESUME - use saved shuffled order if available
+      const session = currentProgress.pausedSession;
       setCurrentQuestionIndex(session.questionIndex);
       setScore(session.score);
-      setDifficulty(session.difficulty); // Force difficulty to match saved session
       setSelectedOption(null);
       setIsAnswerRevealed(false);
-      
-      // Clear pause state once resumed (optional, but good practice to prevent infinite resume loops)
-      // setSavedProgress(prev => ({ ...prev, pausedSession: null })); 
+      // Keep the current shuffled questions (they were saved with the session)
+      if (shuffledQuestions.length === 0) {
+        setShuffledQuestions(shuffleArray(levelQuestions));
+      }
     } else {
-      // START FRESH
+      // START FRESH - shuffle questions for new attempt
+      setShuffledQuestions(shuffleArray(levelQuestions));
       resetLevelState();
     }
     setGameState('PLAYING');
@@ -429,7 +477,10 @@ export default function CosmicQuiz({ onBack }: { onBack: () => void }) {
 
     setSavedProgress(prev => ({
       ...prev,
-      pausedSession: session
+      [difficulty]: {
+        ...prev[difficulty],
+        pausedSession: session
+      }
     }));
 
     setGameState('MAP');
@@ -440,9 +491,15 @@ export default function CosmicQuiz({ onBack }: { onBack: () => void }) {
     setScore(0);
     setSelectedOption(null);
     setIsAnswerRevealed(false);
-    // When starting fresh, ensure we clear any pause data for this level so we don't accidentally resume it later
-    if (savedProgress.pausedSession?.levelId === currentLevelId) {
-        setSavedProgress(prev => ({ ...prev, pausedSession: null }));
+    // When starting fresh, ensure we clear any pause data for this level
+    if (currentProgress.pausedSession?.levelId === currentLevelId) {
+      setSavedProgress(prev => ({
+        ...prev,
+        [difficulty]: {
+          ...prev[difficulty],
+          pausedSession: null
+        }
+      }));
     }
   };
 
@@ -468,31 +525,45 @@ export default function CosmicQuiz({ onBack }: { onBack: () => void }) {
 
   const finishLevel = () => {
     // Clear pause session since we finished
-    setSavedProgress(prev => ({ ...prev, pausedSession: null }));
+    setSavedProgress(prev => ({
+      ...prev,
+      [difficulty]: {
+        ...prev[difficulty],
+        pausedSession: null
+      }
+    }));
     setGameState('RESULT');
   };
 
   const handleNextLevel = () => {
     // Unlock next level logic
     const nextNode = quizList.find(currentLevelId)?.next;
-    
+
     if (nextNode) {
       const nextId = nextNode.data.id;
-      
+
       setSavedProgress(prev => ({
         ...prev,
-        unlockedLevelIds: Array.from(new Set([...prev.unlockedLevelIds, nextId])),
-        completedLevelIds: Array.from(new Set([...prev.completedLevelIds, currentLevelId]))
+        [difficulty]: {
+          ...prev[difficulty],
+          unlockedLevelIds: Array.from(new Set([...prev[difficulty].unlockedLevelIds, nextId])),
+          completedLevelIds: Array.from(new Set([...prev[difficulty].completedLevelIds, currentLevelId]))
+        }
       }));
 
       setCurrentLevelId(nextId);
+      // Shuffle questions for the new level
+      setShuffledQuestions(shuffleArray(nextNode.data.questions[difficulty] || []));
       resetLevelState();
       setGameState('PLAYING');
     } else {
       // All levels done
       setSavedProgress(prev => ({
         ...prev,
-        completedLevelIds: Array.from(new Set([...prev.completedLevelIds, currentLevelId]))
+        [difficulty]: {
+          ...prev[difficulty],
+          completedLevelIds: Array.from(new Set([...prev[difficulty].completedLevelIds, currentLevelId]))
+        }
       }));
       setGameState('MAP');
     }
@@ -500,13 +571,17 @@ export default function CosmicQuiz({ onBack }: { onBack: () => void }) {
 
   const handleRetry = () => {
     if (difficulty === 'HARD') {
-      // Hard mode reset: Lock everything except level 1
-      setSavedProgress({
-        unlockedLevelIds: [1],
-        completedLevelIds: [],
-        pausedSession: null
-      });
+      // Hard mode reset: Lock everything except level 1 for this difficulty
+      setSavedProgress(prev => ({
+        ...prev,
+        [difficulty]: getDefaultDifficultyProgress()
+      }));
       setCurrentLevelId(1);
+    }
+    // Shuffle questions for the retry
+    const levelNode = quizList.find(currentLevelId);
+    if (levelNode) {
+      setShuffledQuestions(shuffleArray(levelNode.data.questions[difficulty] || []));
     }
     resetLevelState();
     setGameState('PLAYING');
@@ -528,12 +603,35 @@ export default function CosmicQuiz({ onBack }: { onBack: () => void }) {
 
       {/* FIXED HEADER - Translucent */}
       <header className="fixed top-0 left-0 w-full z-50 px-6 py-4 flex items-center justify-between border-b border-white/10 bg-black/30 backdrop-blur-xl">
-        <button onClick={onBack} className="p-2 rounded-full bg-white/5 hover:bg-white/10 transition-colors">
+        <button
+          onClick={() => {
+            // Navigate within quiz states instead of always going to orbit
+            if (gameState === 'PLAYING') {
+              // From playing: pause and go to map
+              pauseGame();
+            } else if (gameState === 'MAP') {
+              // From map: go to difficulty select
+              setGameState('DIFFICULTY_SELECT');
+            } else if (gameState === 'RESULT') {
+              // From result: go to map
+              setGameState('MAP');
+            } else {
+              // From difficulty select: go to orbit
+              onBack();
+            }
+          }}
+          className="p-2 rounded-full bg-white/5 hover:bg-white/10 transition-colors"
+        >
           <ArrowLeft className="w-5 h-5" />
         </button>
         <div className="text-right">
           <h1 className="text-xl md:text-2xl font-orbitron font-bold tracking-widest text-white">ORBITAL ACADEMY</h1>
-          <p className="text-[10px] md:text-xs text-slate-400 uppercase tracking-[0.3em]">Simulation Difficulty: Choose your difficulty</p>
+          <p className="text-[10px] md:text-xs text-slate-400 uppercase tracking-[0.3em]">
+            {gameState === 'DIFFICULTY_SELECT' ? 'Choose your difficulty' :
+              gameState === 'MAP' ? `Difficulty: ${difficulty}` :
+                gameState === 'PLAYING' ? `Level ${currentLevelId} | ${difficulty}` :
+                  'Results'}
+          </p>
         </div>
       </header>
 
@@ -544,26 +642,26 @@ export default function CosmicQuiz({ onBack }: { onBack: () => void }) {
           {/* 1. DIFFICULTY SELECT */}
           {gameState === 'DIFFICULTY_SELECT' && (
             <motion.div key="diff" variants={containerVariants} initial="hidden" animate="visible" exit="exit" className="w-full max-w-4xl grid md:grid-cols-3 gap-6 mt-10">
-               <div className="md:col-span-3 text-center mb-8">
-                 <Brain className="w-16 h-16 mx-auto text-white mb-4 animate-pulse" />
-                 <h2 className="text-4xl font-orbitron font-bold text-white mb-2">Initialize Simulation</h2>
-                 <p className="text-slate-400">Select your cognitive stress level.</p>
-               </div>
+              <div className="md:col-span-3 text-center mb-8">
+                <Brain className="w-16 h-16 mx-auto text-white mb-4 animate-pulse" />
+                <h2 className="text-4xl font-orbitron font-bold text-white mb-2">Initialize Simulation</h2>
+                <p className="text-slate-400">Select your cognitive stress level.</p>
+              </div>
 
-               {[
-                 { id: 'EASY', label: 'Easy', desc: 'Standard protocols. Unlimited retries.', color: 'border-green-500/50 hover:bg-green-500/10' },
-                 { id: 'MEDIUM', label: 'Medium', desc: 'Advanced queries. Standard retries.', color: 'border-yellow-500/50 hover:bg-yellow-500/10' },
-                 { id: 'HARD', label: 'Hard', desc: 'Permadeath. Critical failure resets campaign.', color: 'border-red-500/50 hover:bg-red-500/10' }
-               ].map((d) => (
-                 <button
-                    key={d.id}
-                    onClick={() => startGame(d.id as Difficulty)}
-                    className={`p-8 rounded-3xl border bg-slate-900/50 backdrop-blur-xl text-left transition-all group ${d.color}`}
-                 >
-                   <h3 className="text-2xl font-orbitron font-bold text-white mb-2 group-hover:scale-105 transition-transform">{d.label}</h3>
-                   <p className="text-sm text-slate-400 leading-relaxed">{d.desc}</p>
-                 </button>
-               ))}
+              {[
+                { id: 'EASY', label: 'Easy', desc: 'Standard protocols. Unlimited retries.', color: 'border-green-500/50 hover:bg-green-500/10' },
+                { id: 'MEDIUM', label: 'Medium', desc: 'Advanced queries. Standard retries.', color: 'border-yellow-500/50 hover:bg-yellow-500/10' },
+                { id: 'HARD', label: 'Hard', desc: 'Permadeath. Critical failure resets campaign.', color: 'border-red-500/50 hover:bg-red-500/10' }
+              ].map((d) => (
+                <button
+                  key={d.id}
+                  onClick={() => startGame(d.id as Difficulty)}
+                  className={`p-8 rounded-3xl border bg-slate-900/50 backdrop-blur-xl text-left transition-all group ${d.color}`}
+                >
+                  <h3 className="text-2xl font-orbitron font-bold text-white mb-2 group-hover:scale-105 transition-transform">{d.label}</h3>
+                  <p className="text-sm text-slate-400 leading-relaxed">{d.desc}</p>
+                </button>
+              ))}
             </motion.div>
           )}
 
@@ -576,45 +674,43 @@ export default function CosmicQuiz({ onBack }: { onBack: () => void }) {
                 <div className="absolute left-8 top-8 bottom-8 w-1 bg-white/10 rounded-full" />
 
                 {nodes.map((node) => {
-                  const isPaused = savedProgress.pausedSession?.levelId === node.data.id;
-                  
+                  const isPaused = currentProgress.pausedSession?.levelId === node.data.id;
+
                   return (
                     <div key={node.data.id} className="relative flex items-center gap-6 mb-8 group">
                       {/* Node Circle */}
                       <button
                         disabled={!node.isUnlocked}
                         onClick={() => enterLevel(node.data.id)}
-                        className={`relative z-10 w-16 h-16 rounded-full flex items-center justify-center border-2 transition-all duration-300 ${
-                          isPaused
-                            ? 'bg-amber-500/20 border-amber-500 text-amber-500 hover:scale-110 shadow-[0_0_15px_rgba(245,158,11,0.3)] animate-pulse'
-                            : node.isUnlocked 
-                                ? 'bg-black border-white text-white cursor-pointer hover:scale-110 shadow-[0_0_15px_rgba(255,255,255,0.3)]' 
-                                : 'bg-black border-white/10 text-slate-700 cursor-not-allowed'
-                        }`}
+                        className={`relative z-10 w-16 h-16 rounded-full flex items-center justify-center border-2 transition-all duration-300 ${isPaused
+                          ? 'bg-amber-500/20 border-amber-500 text-amber-500 hover:scale-110 shadow-[0_0_15px_rgba(245,158,11,0.3)] animate-pulse'
+                          : node.isUnlocked
+                            ? 'bg-black border-white text-white cursor-pointer hover:scale-110 shadow-[0_0_15px_rgba(255,255,255,0.3)]'
+                            : 'bg-black border-white/10 text-slate-700 cursor-not-allowed'
+                          }`}
                       >
                         {isPaused ? <PauseCircle className="w-8 h-8" /> : (node.completed ? <CheckCircle className="w-6 h-6" /> : node.isUnlocked ? <Unlock className="w-6 h-6" /> : <Lock className="w-6 h-6" />)}
                       </button>
 
                       {/* Info Card */}
-                      <div className={`flex-1 p-6 rounded-2xl border backdrop-blur-md transition-all ${
-                        isPaused
-                            ? 'bg-amber-900/20 border-amber-500/50'
-                            : node.isUnlocked 
-                                ? 'bg-slate-900/60 border-white/20 hover:bg-slate-800/60' 
-                                : 'bg-black/40 border-white/5 opacity-50'
-                      }`}>
+                      <div className={`flex-1 p-6 rounded-2xl border backdrop-blur-md transition-all ${isPaused
+                        ? 'bg-amber-900/20 border-amber-500/50'
+                        : node.isUnlocked
+                          ? 'bg-slate-900/60 border-white/20 hover:bg-slate-800/60'
+                          : 'bg-black/40 border-white/5 opacity-50'
+                        }`}>
                         <div className="flex justify-between items-start">
-                            <div>
-                                <h3 className={`font-orbitron font-bold text-lg ${isPaused ? 'text-amber-500' : 'text-white'}`}>
-                                    {node.data.title}
-                                </h3>
-                                <p className="text-sm text-slate-400">{node.data.description}</p>
-                            </div>
-                            {isPaused && (
-                                <span className="text-[10px] uppercase font-bold tracking-widest bg-amber-500/20 text-amber-400 px-2 py-1 rounded border border-amber-500/30">
-                                    Resume Mission
-                                </span>
-                            )}
+                          <div>
+                            <h3 className={`font-orbitron font-bold text-lg ${isPaused ? 'text-amber-500' : 'text-white'}`}>
+                              {node.data.title}
+                            </h3>
+                            <p className="text-sm text-slate-400">{node.data.description}</p>
+                          </div>
+                          {isPaused && (
+                            <span className="text-[10px] uppercase font-bold tracking-widest bg-amber-500/20 text-amber-400 px-2 py-1 rounded border border-amber-500/30">
+                              Resume Mission
+                            </span>
+                          )}
                         </div>
                       </div>
                     </div>
@@ -630,23 +726,23 @@ export default function CosmicQuiz({ onBack }: { onBack: () => void }) {
               {/* Header Controls */}
               <div className="flex justify-between items-center mb-6">
                 <div className="flex items-center gap-4 flex-1">
-                    <div className="flex-1 h-1 bg-white/10 rounded-full overflow-hidden max-w-[200px]">
-                    <motion.div 
-                        initial={{ width: 0 }}
-                        animate={{ width: `${((currentQuestionIndex) / 7) * 100}%` }}
-                        className="h-full bg-white"
+                  <div className="flex-1 h-1 bg-white/10 rounded-full overflow-hidden max-w-[200px]">
+                    <motion.div
+                      initial={{ width: 0 }}
+                      animate={{ width: `${((currentQuestionIndex) / 7) * 100}%` }}
+                      className="h-full bg-white"
                     />
-                    </div>
-                    <span className="font-orbitron text-xs tracking-widest text-slate-400">Q{currentQuestionIndex + 1}/7</span>
+                  </div>
+                  <span className="font-orbitron text-xs tracking-widest text-slate-400">Q{currentQuestionIndex + 1}/7</span>
                 </div>
-                
+
                 {/* PAUSE BUTTON */}
-                <button 
-                    onClick={pauseGame}
-                    className="flex items-center gap-2 px-4 py-2 rounded-full border border-amber-500/30 text-amber-500 hover:bg-amber-500/10 transition-colors text-xs font-orbitron tracking-widest uppercase"
+                <button
+                  onClick={pauseGame}
+                  className="flex items-center gap-2 px-4 py-2 rounded-full border border-amber-500/30 text-amber-500 hover:bg-amber-500/10 transition-colors text-xs font-orbitron tracking-widest uppercase"
                 >
-                    <Save className="w-4 h-4" />
-                    Pause Mission
+                  <Save className="w-4 h-4" />
+                  Pause Mission
                 </button>
               </div>
 
@@ -661,7 +757,7 @@ export default function CosmicQuiz({ onBack }: { onBack: () => void }) {
                   {activeQuestions[currentQuestionIndex].options.map((option: string, idx: number) => {
                     const isSelected = selectedOption === idx;
                     const isCorrect = idx === activeQuestions[currentQuestionIndex].correctIndex;
-                    
+
                     let buttonStyle = "border-white/10 hover:bg-white/5 text-slate-300";
                     if (isAnswerRevealed) {
                       if (isCorrect) buttonStyle = "border-green-500 bg-green-500/20 text-green-200";
@@ -708,7 +804,7 @@ export default function CosmicQuiz({ onBack }: { onBack: () => void }) {
           {/* 4. RESULT SCREEN */}
           {gameState === 'RESULT' && (
             <motion.div key="result" variants={containerVariants} initial="hidden" animate="visible" exit="exit" className="w-full max-w-2xl text-center mt-20">
-              
+
               <div className={`inline-flex p-6 rounded-full border-2 mb-8 ${score >= 5 ? 'border-green-500 bg-green-500/10' : 'border-red-500 bg-red-500/10'}`}>
                 {score >= 5 ? <Star className="w-12 h-12 text-green-500" /> : <ShieldAlert className="w-12 h-12 text-red-500" />}
               </div>
@@ -716,21 +812,21 @@ export default function CosmicQuiz({ onBack }: { onBack: () => void }) {
               <h2 className="text-5xl font-orbitron font-bold text-white mb-4">
                 {score >= 5 ? 'MISSION ACCOMPLISHED' : 'CRITICAL FAILURE'}
               </h2>
-              
+
               <p className="text-xl text-slate-300 font-inter mb-8">
-                You scored <span className="font-bold text-white">{score}/7</span>. 
+                You scored <span className="font-bold text-white">{score}/7</span>.
                 {score >= 5 ? ' Sufficient proficiency demonstrated.' : ' Proficiency below acceptable threshold.'}
               </p>
 
               <div className="flex justify-center gap-4">
                 {score >= 5 ? (
-                   // SUCCESS
-                   <button
-                     onClick={handleNextLevel}
-                     className="px-8 py-4 bg-white text-black font-orbitron font-bold rounded-full hover:scale-105 transition-transform flex items-center gap-2"
-                   >
-                     Next Level <ArrowLeft className="w-4 h-4 rotate-180" />
-                   </button>
+                  // SUCCESS
+                  <button
+                    onClick={handleNextLevel}
+                    className="px-8 py-4 bg-white text-black font-orbitron font-bold rounded-full hover:scale-105 transition-transform flex items-center gap-2"
+                  >
+                    Next Level <ArrowLeft className="w-4 h-4 rotate-180" />
+                  </button>
                 ) : (
                   // FAIL
                   difficulty === 'HARD' ? (
