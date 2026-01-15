@@ -9,13 +9,13 @@ import { AirQualitySection } from '@/components/earth-impact/AirQualitySection';
 export default function EarthImpactPage() {
     return (
         <main className="min-h-screen bg-black text-white p-6 relative overflow-hidden font-sans">
-            
+
             {/* 1. FIXED RETURN BUTTON */}
-            <Link 
-                href="/?menu=open" 
+            <Link
+                href="/?menu=open"
                 className="fixed top-6 left-6 z-50 text-cyan-400/80 hover:text-cyan-300 inline-flex items-center gap-2 transition-colors text-sm uppercase tracking-widest border border-cyan-500/30 px-4 py-2 rounded-full hover:bg-cyan-500/10 backdrop-blur-md bg-black/20"
             >
-                &larr; 
+                &larr;
             </Link>
 
             {/* Background Ambience */}
@@ -42,7 +42,7 @@ export default function EarthImpactPage() {
                     <div className="mb-8 pl-4 border-l-2 border-emerald-500">
                         <h2 className="text-3xl font-bold text-white mb-2">Feeding the Future</h2>
                         <p className="text-gray-400 max-w-xl">
-                            Farmers use infrared data to see crop stress weeks before it's visible to the human eye.
+                            Farmers use infrared data to see crop stress weeks before it&apos;s visible to the human eye.
                             This allows for precise irrigation and fertilizer use, saving resources and boosting yields.
                         </p>
                     </div>
@@ -55,7 +55,7 @@ export default function EarthImpactPage() {
                     <div className="mb-8 pl-4 border-l-2 border-red-500">
                         <h2 className="text-3xl font-bold text-white mb-2">Cooling Our Cities</h2>
                         <p className="text-gray-400 max-w-xl">
-                            Concrete absorbs heat, creating "Urban Heat Islands" that endanger public health.
+                            Concrete absorbs heat, creating &quot;Urban Heat Islands&quot; that endanger public health.
                             Thermal sensors identify these hotspots, helping planners plant trees and install cool roofs where they are needed most.
                         </p>
                     </div>
