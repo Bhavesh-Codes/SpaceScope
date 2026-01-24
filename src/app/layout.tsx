@@ -1,17 +1,11 @@
+// src/app/layout.tsx
 import './globals.css';
 import React from 'react';
-import { Inter, Orbitron } from 'next/font/google';
+import localFont from 'next/font/local';
 
-
-const inter = Inter({
-  subsets: ['latin'],
-  variable: '--font-inter',
-  display: 'swap',
-});
-
-const orbitron = Orbitron({
-  subsets: ['latin'],
-  variable: '--font-orbitron',
+const lemonMilk = localFont({
+  src: './fonts/Lemon.otf', // Matches the new folder and simple filename
+  variable: '--font-lemon-milk',
   display: 'swap',
 });
 
@@ -20,10 +14,14 @@ export const metadata = {
   description: 'Explore the Universe',
 };
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default function RootLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   return (
-    <html lang="en" className="scroll-smooth">
-      <body className={`${inter.variable} ${orbitron.variable} font-inter bg-black text-slate-400`}>
+    <html lang="en">
+      <body className={`${lemonMilk.variable} font-sans antialiased`}>
         {children}
       </body>
     </html>

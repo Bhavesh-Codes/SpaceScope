@@ -5,17 +5,29 @@ import React, { useState, useEffect, useMemo } from 'react';
 import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import { AnimatePresence, motion } from 'framer-motion';
-import { Loader2, ChevronUp, ChevronDown, Calendar, X } from 'lucide-react';
+import { Loader2, ChevronUp, ChevronDown, Calendar, X, Globe, Sparkles } from 'lucide-react';
 
 import { CelestialEvent, CELESTIAL_EVENTS, getEventsByRegion } from '@/data/celestialEvents';
 import { fetchAllLiveCelestialEvents } from '@/services/celestialApi';
 import Timeline from './Timeline';
 import EventDetails from './EventDetails';
 
-// 2. Define the dynamic component outside the function
+// 2. Define dynamic components outside the function
 const WorldMap = dynamic(() => import('./WorldMap'), {
     ssr: false,
     loading: () => <div className="w-full h-full bg-slate-950 animate-pulse" />
+});
+
+const AuroraGlobe = dynamic(() => import('./AuroraGlobe'), {
+    ssr: false,
+    loading: () => (
+        <div className="w-full h-full bg-slate-950 flex items-center justify-center">
+            <div className="text-center">
+                <Loader2 className="w-8 h-8 animate-spin text-cyan-400 mx-auto mb-2" />
+                <p className="text-slate-400 text-sm">Loading 3D Aurora Globe...</p>
+            </div>
+        </div>
+    )
 });
 
 export default function CelestialLayout() {
@@ -29,6 +41,9 @@ export default function CelestialLayout() {
 
     // Drawer state
     const [drawerOpen, setDrawerOpen] = useState(true);
+
+    // Tab state: 'events' or 'aurora'
+    const [activeTab, setActiveTab] = useState<'events' | 'aurora'>('events');
 
     // Live data state
     const [liveEvents, setLiveEvents] = useState<CelestialEvent[]>([]);
@@ -105,9 +120,12 @@ export default function CelestialLayout() {
                 </div>
 
                 <div className="text-right">
-                    <h1 className="text-3xl font-orbitron font-bold leading-none">CELESTIAL<br />EVENTS</h1>
+                    <h1 className="text-3xl font-orbitron font-bold leading-none">CELESTIAL<br />{activeTab === 'events' ? 'EVENTS' : 'AURORA'}</h1>
                     <p className="text-xs text-slate-400 font-mono mt-1">
-                        {isMounted ? (userLocation ? `FILTERED: ${userLocation.name.toUpperCase()}` : "SELECT REGION") : "SELECT REGION"}
+                        {activeTab === 'events'
+                            ? (isMounted ? (userLocation ? `FILTERED: ${userLocation.name.toUpperCase()}` : "SELECT REGION") : "SELECT REGION")
+                            : "REAL-TIME AURORA"
+                        }
                     </p>
                 </div>
             </header>
@@ -132,77 +150,126 @@ export default function CelestialLayout() {
                 )}
             </AnimatePresence>
 
+            {/* Tab Navigation */}
+            <div className="absolute top-6 left-1/2 -translate-x-1/2 z-40 pointer-events-auto">
+                <div className="flex gap-1 bg-black/60 backdrop-blur-xl border border-white/10 rounded-full p-1">
+                    <button
+                        onClick={() => setActiveTab('events')}
+                        className={`flex items-center gap-2 px-4 py-2 rounded-full text-sm font-bold uppercase tracking-wider transition-all duration-300 ${activeTab === 'events'
+                                ? 'bg-gradient-to-r from-cyan-500 to-blue-500 text-white shadow-lg shadow-cyan-500/25'
+                                : 'text-slate-400 hover:text-white hover:bg-white/10'
+                            }`}
+                    >
+                        <Globe className="w-4 h-4" />
+                        Events
+                    </button>
+                    <button
+                        onClick={() => setActiveTab('aurora')}
+                        className={`flex items-center gap-2 px-4 py-2 rounded-full text-sm font-bold uppercase tracking-wider transition-all duration-300 ${activeTab === 'aurora'
+                                ? 'bg-gradient-to-r from-green-500 to-purple-500 text-white shadow-lg shadow-green-500/25'
+                                : 'text-slate-400 hover:text-white hover:bg-white/10'
+                            }`}
+                    >
+                        <Sparkles className="w-4 h-4" />
+                        Aurora
+                    </button>
+                </div>
+            </div>
+
             {/* --- MAIN LAYOUT --- */}
             <div className="flex-1 flex flex-col h-full relative">
 
-                {/* Map Area */}
-                {isMounted ? (
+                {/* Content Area */}
+                <AnimatePresence mode="wait">
+                    {activeTab === 'events' ? (
+                        // Events Tab - World Map
+                        isMounted ? (
+                            <motion.div
+                                key="events"
+                                className="flex-1 relative w-full"
+                                initial={{ opacity: 0 }}
+                                animate={{
+                                    opacity: 1,
+                                    height: drawerOpen ? 'calc(100vh - 260px)' : 'calc(100vh - 50px)'
+                                }}
+                                exit={{ opacity: 0 }}
+                                transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+                            >
+                                <WorldMap
+                                    selectedEvent={selectedEvent}
+                                    userLocation={userLocation}
+                                    onLocationSelect={handleLocationSelect}
+                                />
+                            </motion.div>
+                        ) : (
+                            <div className="flex-1 relative w-full bg-slate-950 animate-pulse" />
+                        )
+                    ) : (
+                        // Aurora Tab - 3D Globe
+                        <motion.div
+                            key="aurora"
+                            className="flex-1 relative w-full h-full"
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            transition={{ duration: 0.3 }}
+                        >
+                            <AuroraGlobe />
+                        </motion.div>
+                    )}
+                </AnimatePresence>
+
+                {/* Retractable Timeline Drawer - Only show for Events tab */}
+                {activeTab === 'events' && (
                     <motion.div
-                        className="flex-1 relative w-full"
+                        className="absolute bottom-0 left-0 right-0 z-20 bg-gradient-to-t from-black via-slate-950/98 to-transparent"
                         animate={{
-                            height: drawerOpen ? 'calc(100vh - 260px)' : 'calc(100vh - 50px)'
+                            height: drawerOpen ? 260 : 50
                         }}
                         transition={{ type: 'spring', damping: 25, stiffness: 200 }}
                     >
-                        <WorldMap
-                            selectedEvent={selectedEvent}
-                            userLocation={userLocation}
-                            onLocationSelect={handleLocationSelect}
-                        />
-                    </motion.div>
-                ) : (
-                    <div className="flex-1 relative w-full bg-slate-950 animate-pulse" />
-                )}
-
-                {/* Retractable Timeline Drawer */}
-                <motion.div
-                    className="absolute bottom-0 left-0 right-0 z-20 bg-gradient-to-t from-black via-slate-950/98 to-transparent"
-                    animate={{
-                        height: drawerOpen ? 260 : 50
-                    }}
-                    transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-                >
-                    {/* Drawer Handle */}
-                    <div className="relative">
-                        <button
-                            onClick={() => setDrawerOpen(!drawerOpen)}
-                            className="absolute left-1/2 -translate-x-1/2 -top-3 px-5 py-1.5 bg-slate-900 border border-white/20 rounded-full flex items-center gap-2 hover:bg-slate-800 transition-colors group z-30"
-                        >
-                            <Calendar className="w-3.5 h-3.5 text-cyan-400" />
-                            <span className="text-[11px] font-bold text-white uppercase tracking-wider">
-                                Events
-                            </span>
-                            {drawerOpen ? (
-                                <ChevronDown className="w-3.5 h-3.5 text-slate-400 group-hover:text-white transition-colors" />
-                            ) : (
-                                <ChevronUp className="w-3.5 h-3.5 text-slate-400 group-hover:text-white transition-colors" />
-                            )}
-                        </button>
-                    </div>
-
-                    {/* Timeline Content */}
-                    <AnimatePresence>
-                        {drawerOpen && isMounted && (
-                            <motion.div
-                                className="h-full pt-6"
-                                initial={{ opacity: 0 }}
-                                animate={{ opacity: 1 }}
-                                exit={{ opacity: 0 }}
-                                transition={{ duration: 0.2 }}
+                        {/* Drawer Handle */}
+                        <div className="relative">
+                            <button
+                                onClick={() => setDrawerOpen(!drawerOpen)}
+                                className="absolute left-1/2 -translate-x-1/2 -top-3 px-5 py-1.5 bg-slate-900 border border-white/20 rounded-full flex items-center gap-2 hover:bg-slate-800 transition-colors group z-30"
                             >
-                                <Timeline
-                                    events={filteredEvents}
-                                    loading={loading}
-                                    onSelectEvent={handleEventSelect}
-                                    selectedEventId={selectedEvent?.id}
-                                    selectedCountry={userLocation?.name}
-                                    selectedYear={selectedYear}
-                                    onYearChange={setSelectedYear}
-                                />
-                            </motion.div>
-                        )}
-                    </AnimatePresence>
-                </motion.div>
+                                <Calendar className="w-3.5 h-3.5 text-cyan-400" />
+                                <span className="text-[11px] font-bold text-white uppercase tracking-wider">
+                                    Events
+                                </span>
+                                {drawerOpen ? (
+                                    <ChevronDown className="w-3.5 h-3.5 text-slate-400 group-hover:text-white transition-colors" />
+                                ) : (
+                                    <ChevronUp className="w-3.5 h-3.5 text-slate-400 group-hover:text-white transition-colors" />
+                                )}
+                            </button>
+                        </div>
+
+                        {/* Timeline Content */}
+                        <AnimatePresence>
+                            {drawerOpen && isMounted && (
+                                <motion.div
+                                    className="h-full pt-6"
+                                    initial={{ opacity: 0 }}
+                                    animate={{ opacity: 1 }}
+                                    exit={{ opacity: 0 }}
+                                    transition={{ duration: 0.2 }}
+                                >
+                                    <Timeline
+                                        events={filteredEvents}
+                                        loading={loading}
+                                        onSelectEvent={handleEventSelect}
+                                        selectedEventId={selectedEvent?.id}
+                                        selectedCountry={userLocation?.name}
+                                        selectedYear={selectedYear}
+                                        onYearChange={setSelectedYear}
+                                    />
+                                </motion.div>
+                            )}
+                        </AnimatePresence>
+                    </motion.div>
+                )}
 
             </div>
 

@@ -47,7 +47,7 @@ export default function SpaceScroll() {
                 // Scroll instantly to the bottom where the HUD is
                 window.scrollTo({
                     top: document.body.scrollHeight,
-                    behavior: 'instant' 
+                    behavior: 'instant'
                 });
             }
         }
@@ -55,6 +55,7 @@ export default function SpaceScroll() {
 
     // Preload Images
     useEffect(() => {
+        let isMounted = true;
         const loadedImages: HTMLImageElement[] = [];
         // Initialize array with explicit size to preserve order
         for (let i = 0; i < FRAME_COUNT; i++) loadedImages.push(null as any);
@@ -62,8 +63,12 @@ export default function SpaceScroll() {
         let loadCounter = 0;
 
         const onImageLoadOrError = () => {
+            if (!isMounted) return;
             loadCounter++;
-            setLoadedCount(prev => prev + 1);
+
+            // Update state on every frame for smoother feedback
+            setLoadedCount(loadCounter);
+
             if (loadCounter >= FRAME_COUNT) {
                 setIsLoading(false);
             }
@@ -75,12 +80,20 @@ export default function SpaceScroll() {
             img.src = `/sequence/ezgif-frame-${frameStr}.jpg`;
 
             img.onload = () => {
+                if (!isMounted) return;
                 loadedImages[i] = img; // Ensure correct index
                 onImageLoadOrError();
             };
-            img.onerror = onImageLoadOrError;
+            img.onerror = () => {
+                if (!isMounted) return;
+                onImageLoadOrError();
+            };
         }
         imagesRef.current = loadedImages;
+
+        return () => {
+            isMounted = false;
+        };
     }, []);
 
     // Optimized Render Function
@@ -165,10 +178,10 @@ export default function SpaceScroll() {
                 {/* 0% Start */}
                 <motion.div style={{ opacity: opacityText1 }} className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none z-10 transition-opacity duration-300">
                     <div className="text-center px-4 mb-20">
-                        <h1 className="text-6xl md:text-9xl font-bold font-orbitron tracking-tighter text-white drop-shadow-[0_0_30px_rgba(6,182,212,0.8)]">
+                        <h1 className="text-6xl md:text-9xl font-bold font-orbitron uppercase tracking-tighter text-white mb-4" style={{ textShadow: '4px 4px 0px #005A9C' }}>
                             SpaceScope
                         </h1>
-                        <p className="text-xl md:text-3xl text-cyan-100/90 font-inter font-light tracking-[0.8em] mt-8 ml-2 uppercase drop-shadow-[0_0_10px_rgba(6,182,212,0.5)]">
+                        <p className="text-xl md:text-3xl text-cyan-100/90 font-orbitron tracking-widest mt-4 uppercase" style={{ textShadow: '2px 2px 0px #005A9C' }}>
                             Explore the Universe
                         </p>
                     </div>
@@ -187,33 +200,35 @@ export default function SpaceScroll() {
                 {/* 25% Zoom */}
                 <motion.div style={{ opacity: opacityText2 }} className="absolute inset-0 flex items-center justify-start pl-10 md:pl-32 pointer-events-none z-10">
                     <div className="max-w-xl text-left">
-                        <h2 className="text-4xl md:text-7xl font-bold font-orbitron mb-4 text-white drop-shadow-[0_0_10px_rgba(255,255,255,0.5)]">Beyond the<br />Event Horizon</h2>
-                        <p className="text-xl md:text-2xl text-cyan-100 font-inter font-light drop-shadow-md bg-black/30 backdrop-blur-sm p-4 rounded-xl border-l-2 border-cyan-500/50">Journey through the celestial void where stars are born.</p>
+                        <h2 className="text-4xl md:text-7xl font-bold font-orbitron mb-4 text-white uppercase tracking-tighter" style={{ textShadow: '3px 3px 0px #005A9C' }}>Beyond the<br />Event Horizon</h2>
+                        <p className="text-xl md:text-3xl text-white font-orbitron font-bold tracking-wide" style={{ textShadow: '2px 2px 0px #005A9C' }}>Journey through the celestial void where stars are born.</p>
                     </div>
                 </motion.div>
 
                 {/* 50% Zoom */}
                 <motion.div style={{ opacity: opacityText3 }} className="absolute inset-0 flex items-center justify-end pr-10 md:pr-32 pointer-events-none z-10">
                     <div className="text-right max-w-xl">
-                        <h2 className="text-4xl md:text-7xl font-bold font-orbitron mb-4 text-white drop-shadow-[0_0_10px_rgba(255,255,255,0.5)]">Data from<br />the Stars</h2>
-                        <p className="text-xl md:text-2xl text-cyan-100 font-inter font-light drop-shadow-md bg-black/30 backdrop-blur-sm p-4 rounded-xl border-r-2 border-cyan-500/50">Streaming millions of data points from deep space satellites.</p>
+                        <h2 className="text-4xl md:text-7xl font-bold font-orbitron mb-4 text-white uppercase tracking-tighter" style={{ textShadow: '3px 3px 0px #005A9C' }}>Data from<br />the Stars</h2>
+                        <p className="text-xl md:text-3xl text-white font-orbitron font-bold tracking-wide" style={{ textShadow: '2px 2px 0px #005A9C' }}>Streaming millions of data points from deep space satellites.</p>
                     </div>
                 </motion.div>
 
                 {/* 75% Zoom */}
                 <motion.div style={{ opacity: opacityText4 }} className="absolute inset-0 flex items-center justify-center pointer-events-none z-10">
                     <div className="text-center">
-                        <h2 className="text-5xl md:text-8xl font-bold font-orbitron mb-6 text-white drop-shadow-[0_0_15px_rgba(255,255,255,0.6)]">Solving Problems<br />on Earth</h2>
-                        <p className="text-2xl text-white font-inter font-light drop-shadow-lg bg-black/20 backdrop-blur-sm px-6 py-2 rounded-full inline-block">Using orbital perspective to heal our planet.</p>
+                        <h2 className="text-5xl md:text-8xl font-bold font-orbitron mb-6 text-white uppercase tracking-tighter" style={{ textShadow: '3px 3px 0px #005A9C' }}>Solving Problems<br />on Earth</h2>
+                        <p className="text-2xl md:text-4xl text-white font-orbitron font-bold px-6 py-2 inline-block tracking-wide" style={{ textShadow: '2px 2px 0px #005A9C' }}>Using orbital perspective to heal our planet.</p>
                     </div>
                 </motion.div>
 
                 {/* HUD (>98%) */}
                 <motion.div
                     style={{ opacity: opacityHUD, pointerEvents: pointerEventsHUD }}
-                    className="absolute inset-0 flex items-center justify-center z-50 bg-black/40 backdrop-blur-md"
+                    className="absolute inset-0 flex items-center justify-center z-50"
                 >
-                    <OrbitalHUD />
+                    <div className="w-full">
+                        <BauhausMenu />
+                    </div>
                 </motion.div>
             </div>
 
@@ -224,7 +239,7 @@ export default function SpaceScroll() {
                         initial={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
                         transition={{ duration: 1 }}
-                        className="fixed inset-0 z-[100] bg-space-black flex flex-col items-center justify-center text-cyan-500"
+                        className="fixed inset-0 z-[100] bg-black flex flex-col items-center justify-center text-cyan-500"
                     >
                         <div className="w-64 h-1 bg-slate-800 rounded-full overflow-hidden mb-8 relative">
                             <motion.div
@@ -243,55 +258,121 @@ export default function SpaceScroll() {
     );
 }
 
-function OrbitalHUD() {
-    const buttons = [
-        { label: "Celestial Events", icon: Rocket, color: "text-purple-400", border: "border-purple-500/30", bg: "hover:bg-purple-500/10", shadow: "hover:shadow-purple-500/20", desc: "Eclipses & Comets" },
-        { label: "Cosmic Weather", icon: Zap, color: "text-yellow-400", border: "border-yellow-500/30", bg: "hover:bg-yellow-500/10", shadow: "hover:shadow-yellow-500/20", desc: "Solar Flares" },
-        { label: "Missions", icon: Globe, color: "text-blue-400", border: "border-blue-500/30", bg: "hover:bg-blue-500/10", shadow: "hover:shadow-blue-500/20", desc: "Past & Future" },
-        { label: "Learning Zone", icon: BookOpen, color: "text-green-400", border: "border-green-500/30", bg: "hover:bg-green-500/10", shadow: "hover:shadow-green-500/20", desc: "Encyclopedia" },
-        { label: "Earth Impact", icon: AlertTriangle, color: "text-red-400", border: "border-red-500/30", bg: "hover:bg-red-500/10", shadow: "hover:shadow-red-500/20", desc: "Climate Data" },
+function BauhausMenu() {
+    // Top Row: Missions, Earth Impact (Wide)
+    const topRowItems = [
+        {
+            id: 1,
+            label: "Missions",
+            sub: "Past, Present & Future Missions",
+            icon: Globe,
+            bg: "bg-black/80 border-2 border-white/40",
+            text: "text-white",
+            shape: "rounded-none",
+        },
+        {
+            id: 2,
+            label: "Earth Impact",
+            sub: "Satellite-Based Climate Data",
+            icon: AlertTriangle,
+            bg: "bg-black/80 border-2 border-white/40",
+            text: "text-white",
+            shape: "rounded-t-[3rem]",
+        },
     ];
 
-    return (
-        <div className="w-full max-w-[1400px] mx-auto px-6 flex flex-col items-center justify-center min-h-[60vh]">
-            <div className="mb-10 w-full flex justify-center">
-                <KineticHeader text="Orbital Command" align="center" color="text-white" size="md" />
+    // Bottom Row: Celestial, Weather, Learning (Standard)
+    const bottomRowItems = [
+        {
+            id: 3,
+            label: "Celestial Events",
+            sub: "Eclipses, Comets & Showers",
+            icon: Rocket,
+            bg: "bg-black/80 border-2 border-white/40",
+            text: "text-white",
+            shape: "rounded-tl-[2rem] rounded-br-[2rem]",
+        },
+        {
+            id: 4,
+            label: "Cosmic Weather",
+            sub: "Solar Flares & Aurora Alerts",
+            icon: Zap,
+            bg: "bg-black/80 border-2 border-white/40",
+            text: "text-white",
+            shape: "rounded-full",
+        },
+        {
+            id: 5,
+            label: "Learning Zone",
+            sub: "Encyclopedia & Quizzes",
+            icon: BookOpen,
+            bg: "bg-black/80 border-2 border-white/40",
+            text: "text-white",
+            shape: "rounded-tr-[2rem] rounded-bl-[2rem]",
+        },
+    ];
+
+    const MenuCard = ({ item, isWide = false }: { item: any, isWide?: boolean }) => (
+        <button
+            onClick={() => {
+                const map: Record<string, string> = {
+                    'Missions': '/missions',
+                    'Earth Impact': '/earth-impact',
+                    'Cosmic Weather': '/cosmic-weather',
+                    'Learning Zone': '/quiz',
+                    'Celestial Events': '/celestial-events'
+                };
+                if (map[item.label]) window.location.href = map[item.label];
+            }}
+            className={`group relative flex flex-row items-center justify-start transition-all duration-300 hover:-translate-y-1 hover:shadow-[0px_0px_20px_rgba(255,255,255,0.2)] hover:border-white/60 ${item.bg} ${item.text} px-6 py-6 ${isWide ? 'h-[180px]' : 'h-[160px]'} rounded-3xl`}
+        >
+            {/* Number: Defined space to prevent overlap */}
+            <div className="text-6xl font-black opacity-40 font-orbitron mr-6 w-16 text-center shrink-0">
+                {item.id}
             </div>
 
-            <div className="flex flex-wrap justify-center gap-6 w-full">
-                {buttons.map((btn, i) => (
-                    <button
-                        key={i}
-                        onClick={() => {
-                            if (btn.label === 'Missions') window.location.href = '/missions';
-                            if (btn.label === 'Earth Impact') window.location.href = '/earth-impact';
-                            if (btn.label === 'Cosmic Weather') window.location.href = '/cosmic-weather';
-                            if (btn.label === 'Learning Zone') window.location.href = '/quiz';
-                            if (btn.label === 'Celestial Events') window.location.href = '/celestial-events';
-                        }}
-                        className={`group relative flex flex-col items-center justify-center w-full sm:w-[200px] h-[280px] rounded-[2rem] border ${btn.border} bg-slate-900/40 backdrop-blur-xl transition-all duration-500 hover:scale-105 hover:-translate-y-2 hover:shadow-2xl ${btn.shadow} ${btn.bg} overflow-hidden`}
-                    >
-                        {/* Internal Gradient */}
-                        <div className="absolute inset-0 bg-gradient-to-b from-white/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+            {/* Geometric Icon Container */}
+            <div className={`flex items-center justify-center bg-white/10 ${item.shape} shrink-0 mr-6 ${isWide ? 'w-24 h-24' : 'w-20 h-20'}`}>
+                <item.icon className={`${isWide ? 'w-10 h-10' : 'w-8 h-8'}`} />
+            </div>
 
-                        {/* Icon Container */}
-                        <div className={`relative z-10 p-5 rounded-2xl bg-white/5 mb-6 group-hover:scale-110 transition-transform duration-500 ring-1 ring-white/10 ${btn.color.replace('text', 'bg')}/10`}>
-                            <btn.icon className={`w-10 h-10 ${btn.color} drop-shadow-[0_0_15px_rgba(255,255,255,0.2)]`} />
-                        </div>
+            {/* Typography: Pushed right */}
+            <div className="text-right z-10 flex-grow ml-auto">
+                <h3 className={`${isWide ? 'text-3xl' : 'text-xl'} font-black uppercase leading-none mb-2 tracking-tighter`}>
+                    {item.label}
+                </h3>
+                <span className="text-[12px] font-bold uppercase tracking-widest opacity-80 border-t-2 border-current pt-1 inline-block">
+                    {item.sub}
+                </span>
+            </div>
+        </button>
+    );
 
-                        {/* Text Content */}
-                        <h3 className="relative z-10 text-sm font-orbitron font-bold text-slate-200 group-hover:text-white uppercase tracking-widest mb-2 transition-colors text-center px-2">
-                            {btn.label}
-                        </h3>
+    return (
+        <div className="w-full max-w-[1400px] mx-auto px-4 flex flex-col items-center justify-center font-sans">
+            {/* Header: Relative position to sit naturally above cards */}
+            <div className="w-full text-center mb-8 mt-2">
+                <h2 className="text-6xl md:text-9xl font-bold font-orbitron text-white uppercase tracking-tighter mb-4" style={{ textShadow: '4px 4px 0px #005A9C' }}>
+                    COSMIC EXPLORATION
+                </h2>
+                <div className="inline-block bg-white text-black px-6 py-1 text-base md:text-xl font-bold uppercase tracking-widest transform -rotate-1 font-orbitron shadow-[4px_4px_0px_#005A9C]">
+                    Select your path through the stars
+                </div>
+            </div>
 
-                        <span className="relative z-10 text-[10px] font-inter text-slate-400 group-hover:text-cyan-200 opacity-60 group-hover:opacity-100 transition-opacity uppercase tracking-wider">
-                            {btn.desc}
-                        </span>
+            {/* Grid Container */}
+            <div className="w-full flex flex-col gap-6">
 
-                        {/* Interactive Border Glow */}
-                        <div className={`absolute inset-0 rounded-[2rem] border-2 ${btn.border} opacity-0 group-hover:opacity-100 blur-sm transition-opacity duration-500`} />
-                    </button>
-                ))}
+                {/* Top Row: 2 Wide Items */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 w-full">
+                    {topRowItems.map((item) => <MenuCard key={item.id} item={item} isWide={true} />)}
+                </div>
+
+                {/* Bottom Row: 3 Standard Items */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 w-full">
+                    {bottomRowItems.map((item) => <MenuCard key={item.id} item={item} isWide={false} />)}
+                </div>
+
             </div>
         </div>
     )

@@ -5,7 +5,7 @@ import { motion } from 'framer-motion';
 import { Mission } from '@/data/missions';
 import Image from 'next/image';
 
-export default function MissionBento({ mission, index }: { mission: Mission, index: number }) {
+export default function MissionBento({ mission, index, onClick }: { mission: Mission, index: number, onClick: (m: Mission) => void }) {
     const isEven = index % 2 === 0;
 
     return (
@@ -14,10 +14,11 @@ export default function MissionBento({ mission, index }: { mission: Mission, ind
             whileInView={{ opacity: 1, scale: 1 }}
             viewport={{ once: true, margin: "-100px" }}
             transition={{ duration: 0.8 }}
-            className={`grid grid-cols-1 md:grid-cols-12 gap-4 w-full max-w-7xl mx-auto mb-32 p-4`}
+            className={`cursor-pointer grid grid-cols-1 md:grid-cols-12 gap-4 w-full max-w-7xl mx-auto mb-32 p-4 group/bento`}
+            onClick={() => onClick(mission)}
         >
             {/* Large Image Block */}
-            <div className={`md:col-span-8 relative h-[500px] rounded-3xl overflow-hidden group border-2 border-white/10 ${isEven ? 'md:order-1' : 'md:order-2'}`}>
+            <div className={`md:col-span-8 relative h-[500px] rounded-3xl overflow-hidden group border-2 border-white/10 ${isEven ? 'md:order-1' : 'md:order-2'} hover:border-cyan-500/50 transition-colors duration-500`}>
                 <Image
                     src={mission.image}
                     alt={mission.name}
@@ -31,6 +32,7 @@ export default function MissionBento({ mission, index }: { mission: Mission, ind
                     <span className={`inline-block px-3 py-1 rounded-full text-xs font-bold uppercase tracking-widest bg-white/20 backdrop-blur-md text-white border border-white/20`}>
                         {mission.status}
                     </span>
+                    <p className="mt-2 text-cyan-300 text-sm uppercase tracking-widest opacity-0 group-hover/bento:opacity-100 transition-opacity translate-y-2 group-hover/bento:translate-y-0">Click to Explore &rarr;</p>
                 </div>
             </div>
 
@@ -43,7 +45,7 @@ export default function MissionBento({ mission, index }: { mission: Mission, ind
                     <h4 className={`text-5xl font-orbitron font-bold ${mission.color}`}>{mission.year}</h4>
                     <div className="flex items-center justify-between mt-auto">
                         <span className="text-white font-bold">{mission.agency}</span>
-                        <div className={`w-2 h-2 rounded-full ${mission.status === 'Success' ? 'bg-green-500' : 'bg-yellow-500'} animate-pulse`} />
+                        <div className={`w-2 h-2 rounded-full ${mission.status === 'Success' ? 'bg-green-500' : mission.status === 'Ongoing' ? 'bg-blue-500' : 'bg-yellow-500'} animate-pulse`} />
                     </div>
                 </div>
 
@@ -51,7 +53,7 @@ export default function MissionBento({ mission, index }: { mission: Mission, ind
                 <div className="row-span-2 bg-black/40 backdrop-blur-md rounded-3xl border border-white/10 p-6 relative overflow-hidden group">
                     <div className={`absolute top-0 left-0 w-1 h-full ${mission.color.replace('text-', 'bg-')}`} />
                     <h5 className="text-xl font-orbitron text-white mb-4">Mission Profile</h5>
-                    <p className="text-slate-300 font-inter leading-relaxed">{mission.description}</p>
+                    <p className="text-slate-300 font-inter leading-relaxed line-clamp-4">{mission.description}</p>
                     <p className="text-slate-400 font-inter text-sm mt-4 leading-relaxed opacity-0 group-hover:opacity-100 transition-opacity duration-300">
                         {mission.details}
                     </p>
