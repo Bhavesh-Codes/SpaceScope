@@ -22,7 +22,8 @@ export const ClimateSection = () => {
             leftImage: '/assets/earth-impact/glacier-1980.png',
             rightImage: '/assets/earth-impact/glacier-2025.png',
             stat: '-1.2m / year',
-            statLabel: 'Average Ice Loss'
+            statLabel: 'Average Ice Loss',
+            reportUrl: 'https://science.nasa.gov/climate-change/glacial-retreat/'
         },
         seaLevel: {
             id: 'seaLevel',
@@ -37,7 +38,8 @@ export const ClimateSection = () => {
             leftImage: '/assets/earth-impact/coastal-now.png',
             rightImage: '/assets/earth-impact/coastal-risk.png',
             stat: '+3.4mm / year',
-            statLabel: 'Global Mean Rise'
+            statLabel: 'Global Mean Rise',
+            reportUrl: 'https://sealevel.nasa.gov/'
         }
     };
 
@@ -143,9 +145,14 @@ export const ClimateSection = () => {
                     </div>
 
                     <div className="mt-8 pt-6 border-t border-white/10">
-                        <button className="w-full py-3 rounded-lg bg-white text-black font-bold text-sm hover:bg-gray-200 transition-colors flex items-center justify-center gap-2 shadow-[0_0_20px_rgba(255,255,255,0.1)]">
+                        <a
+                            href={currentTab.reportUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="w-full py-3 rounded-lg bg-white text-black font-bold text-sm hover:bg-gray-200 transition-colors flex items-center justify-center gap-2 shadow-[0_0_20px_rgba(255,255,255,0.1)]"
+                        >
                             VIEW FULL REPORT <ArrowUpRight className="w-4 h-4" />
-                        </button>
+                        </a>
                     </div>
                 </div>
             </div>
