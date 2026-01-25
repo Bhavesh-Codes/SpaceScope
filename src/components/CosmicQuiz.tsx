@@ -598,7 +598,28 @@ export default function CosmicQuiz({ onBack }: { onBack: () => void }) {
   return (
     <div className="min-h-screen w-full bg-black relative overflow-hidden text-slate-200 font-inter">
       {/* Static Background */}
-      <div className="fixed inset-0 bg-[url('/backgrounds/bg_earth.png')] bg-cover bg-center opacity-20 blur-2xl pointer-events-none" />
+      {/* Dynamic Backgrounds */}
+      <AnimatePresence mode="popLayout">
+        <motion.div
+          key={gameState === 'DIFFICULTY_SELECT' ? 'select' : difficulty}
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 1 }}
+          className="fixed inset-0 bg-cover bg-center pointer-events-none"
+          style={{
+            backgroundImage: `url(${
+              gameState === 'DIFFICULTY_SELECT'
+                ? '/backgrounds/bg_quiz_select.png'
+                : difficulty === 'EASY'
+                ? '/backgrounds/bg_quiz_easy.png'
+                : difficulty === 'MEDIUM'
+                ? '/backgrounds/bg_quiz_medium.png'
+                : '/backgrounds/bg_quiz_hard.png'
+            })`
+          }}
+        />
+      </AnimatePresence>
       <div className="fixed inset-0 bg-gradient-to-b from-black/90 via-black/50 to-black/90 pointer-events-none" />
 
       {/* FIXED HEADER - Translucent */}

@@ -260,6 +260,7 @@ export default function SpaceScroll() {
 
 function BauhausMenu() {
     // Top Row: Missions, Earth Impact (Wide)
+    const uniformShape = "rounded-tl-[2rem] rounded-br-[2rem]";
     const topRowItems = [
         {
             id: 1,
@@ -268,7 +269,7 @@ function BauhausMenu() {
             icon: Globe,
             bg: "bg-black/80 border-2 border-white/40",
             text: "text-white",
-            shape: "rounded-none",
+            shape: uniformShape,
         },
         {
             id: 2,
@@ -277,7 +278,7 @@ function BauhausMenu() {
             icon: AlertTriangle,
             bg: "bg-black/80 border-2 border-white/40",
             text: "text-white",
-            shape: "rounded-t-[3rem]",
+            shape: uniformShape,
         },
     ];
 
@@ -290,7 +291,7 @@ function BauhausMenu() {
             icon: Rocket,
             bg: "bg-black/80 border-2 border-white/40",
             text: "text-white",
-            shape: "rounded-tl-[2rem] rounded-br-[2rem]",
+            shape: uniformShape,
         },
         {
             id: 4,
@@ -299,7 +300,7 @@ function BauhausMenu() {
             icon: Zap,
             bg: "bg-black/80 border-2 border-white/40",
             text: "text-white",
-            shape: "rounded-full",
+            shape: uniformShape,
         },
         {
             id: 5,
@@ -308,7 +309,7 @@ function BauhausMenu() {
             icon: BookOpen,
             bg: "bg-black/80 border-2 border-white/40",
             text: "text-white",
-            shape: "rounded-tr-[2rem] rounded-bl-[2rem]",
+            shape: uniformShape,
         },
     ];
 
