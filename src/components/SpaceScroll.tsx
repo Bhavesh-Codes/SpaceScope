@@ -77,7 +77,7 @@ export default function SpaceScroll() {
         for (let i = 0; i < FRAME_COUNT; i++) {
             const img = new Image();
             const frameStr = (i + 1).toString().padStart(3, '0');
-            img.src = `/sequence/ezgif-frame-${frameStr}.jpg`;
+            img.src = `sequence/ezgif-frame-${frameStr}.jpg`;
 
             img.onload = () => {
                 if (!isMounted) return;
