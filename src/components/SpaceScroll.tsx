@@ -3,7 +3,6 @@
 import React, { useRef, useEffect, useState } from 'react';
 import { useScroll, useTransform, useMotionValueEvent, motion, AnimatePresence } from 'framer-motion';
 import { Rocket, Globe, Zap, BookOpen, AlertTriangle, ChevronDown } from 'lucide-react';
-import KineticHeader from './missions/KineticHeader';
 import { useSearchParams } from 'next/navigation';
 
 const FRAME_COUNT = 240;
@@ -13,7 +12,6 @@ export default function SpaceScroll() {
     const canvasRef = useRef<HTMLCanvasElement>(null);
 
     // Optimization: Store images in Ref to avoid React re-renders on every frame access
-    // This detaches the large image array from React's state management
     const imagesRef = useRef<HTMLImageElement[]>([]);
 
     const [loadedCount, setLoadedCount] = useState(0);
@@ -53,7 +51,7 @@ export default function SpaceScroll() {
         }
     }, [isLoading]);
 
-    // Preload Images
+    // Preload Images with Debugging
     useEffect(() => {
         let isMounted = true;
         const loadedImages: HTMLImageElement[] = [];
@@ -61,6 +59,7 @@ export default function SpaceScroll() {
         for (let i = 0; i < FRAME_COUNT; i++) loadedImages.push(null as any);
 
         let loadCounter = 0;
+        let failCounter = 0;
 
         const onImageLoadOrError = () => {
             if (!isMounted) return;
@@ -70,22 +69,36 @@ export default function SpaceScroll() {
             setLoadedCount(loadCounter);
 
             if (loadCounter >= FRAME_COUNT) {
+                if (failCounter > 0) {
+                    console.warn(`⚠️ Finished loading with ${failCounter} failed images.`);
+                } else {
+                    console.log('✅ All space frames loaded successfully!');
+                }
                 setIsLoading(false);
             }
         };
 
+        console.log('🚀 Starting space sequence load...');
+
         for (let i = 0; i < FRAME_COUNT; i++) {
             const img = new Image();
             const frameStr = (i + 1).toString().padStart(3, '0');
-            img.src = `sequence/ezgif-frame-${frameStr}.jpg`;
+            
+            // NOTE: The leading slash is required for Next.js public folder
+            // URL will look like: https://your-site.com/sequence/ezgif-frame-001.jpg
+            img.src = `/sequence/ezgif-frame-${frameStr}.jpg`;
 
             img.onload = () => {
                 if (!isMounted) return;
                 loadedImages[i] = img; // Ensure correct index
                 onImageLoadOrError();
             };
-            img.onerror = () => {
+            
+            img.onerror = (e) => {
                 if (!isMounted) return;
+                failCounter++;
+                // DEBUG: This will print the exact path that failed to the console
+                console.error(`❌ Failed to load frame ${i + 1}:`, img.src);
                 onImageLoadOrError();
             };
         }
@@ -168,7 +181,7 @@ export default function SpaceScroll() {
     }, [isLoading]);
 
     return (
-        <div ref={containerRef} className="relative h-[500vh] w-full bg-space-black">
+        <div ref={containerRef} className="relative h-[500vh] w-full bg-black">
 
             {/* Canvas Sticky Layer */}
             <div className="sticky top-0 h-screen w-full overflow-hidden">
