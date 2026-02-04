@@ -5,7 +5,7 @@ import { useScroll, useTransform, useMotionValueEvent, motion, AnimatePresence }
 import { Rocket, Globe, Zap, BookOpen, AlertTriangle, ChevronDown } from 'lucide-react';
 import { useSearchParams } from 'next/navigation';
 
-const FRAME_COUNT = 240;
+const FRAME_COUNT = 192;
 
 export default function SpaceScroll() {
     const containerRef = useRef<HTMLDivElement>(null);
@@ -82,18 +82,18 @@ export default function SpaceScroll() {
 
         for (let i = 0; i < FRAME_COUNT; i++) {
             const img = new Image();
-            const frameStr = (i + 1).toString().padStart(3, '0');
-            
+            const frameStr = (i + 1).toString().padStart(4, '0');
+
             // NOTE: The leading slash is required for Next.js public folder
-            // URL will look like: https://your-site.com/sequence/ezgif-frame-001.jpg
-            img.src = `/sequence/ezgif-frame-${frameStr}.jpg`;
+            // URL will look like: https://your-site.com/sequence1/0001.webp
+            img.src = `/sequence1/${frameStr}.webp`;
 
             img.onload = () => {
                 if (!isMounted) return;
                 loadedImages[i] = img; // Ensure correct index
                 onImageLoadOrError();
             };
-            
+
             img.onerror = (e) => {
                 if (!isMounted) return;
                 failCounter++;
