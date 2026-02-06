@@ -92,7 +92,7 @@ export default function CreateQuizPage() {
                 window.removeEventListener('mouseup', handleMouseUp)
             }
         }
-    }, [isResizing])
+    }, [isResizing, handleMouseMove])
 
     // --- Actions ---
 

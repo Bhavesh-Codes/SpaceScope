@@ -153,6 +153,7 @@ export default function SpaceScroll() {
     };
 
     // Handle Resize Explicitly
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     useEffect(() => {
         const handleResize = () => {
             if (canvasRef.current) {

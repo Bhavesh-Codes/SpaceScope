@@ -109,6 +109,7 @@ export default function StudentDashboard() {
     }
 
     // Initial fetch on mount + refetch on window focus
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     useEffect(() => {
         fetchDashboardData()
 

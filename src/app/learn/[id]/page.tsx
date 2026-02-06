@@ -12,9 +12,9 @@ export default function LearningModePage() {
     const id = params.id as string
 
     // Find module locally
-    const module = LEARNING_MODULES.find(m => m.id === id)
+    const learningModule = LEARNING_MODULES.find(m => m.id === id)
 
-    if (!module) {
+    if (!learningModule) {
         return (
             <div className="min-h-screen bg-black flex items-center justify-center text-white">
                 <div className="text-center">
@@ -31,7 +31,7 @@ export default function LearningModePage() {
     }
 
     // Helper to get image path or default
-    const getModuleImage = () => module.imagePath ? `${module.imagePath}/1.jpg` : '/images/nebula.jpg'
+    const getModuleImage = () => learningModule.imagePath ? `${learningModule.imagePath}/1.jpg` : '/images/nebula.jpg'
 
     return (
         <div className="min-h-screen bg-black text-white selection:bg-blue-500/30">
@@ -46,7 +46,7 @@ export default function LearningModePage() {
                 </button>
                 <div className="flex items-center gap-2 text-sm font-mono text-blue-400">
                     <LucideBookOpen size={16} />
-                    <span>ACADEMY ARCHIVE: {module.title.toUpperCase()}</span>
+                    <span>ACADEMY ARCHIVE: {learningModule.title.toUpperCase()}</span>
                 </div>
                 <div className="w-10" /> {/* Spacer */}
             </header>
@@ -67,10 +67,10 @@ export default function LearningModePage() {
 
                         <div className="absolute bottom-0 left-0 p-8 md:p-12">
                             <h1 className="text-4xl md:text-6xl font-bold mb-4 leading-tight">
-                                {module.title}
+                                {learningModule.title}
                             </h1>
                             <p className="text-lg md:text-xl text-white/80 max-w-2xl font-light leading-relaxed">
-                                {module.description}
+                                {learningModule.description}
                             </p>
                         </div>
                     </div>
@@ -83,7 +83,7 @@ export default function LearningModePage() {
                         </h2>
                         <div className="bg-white/5 border border-white/10 backdrop-blur-md rounded-2xl p-8">
                             <div className="prose prose-invert prose-lg max-w-none text-white/80 leading-loose whitespace-pre-wrap">
-                                {module.content}
+                                {learningModule.content}
                             </div>
                         </div>
                     </div>
@@ -94,7 +94,8 @@ export default function LearningModePage() {
                             onClick={() => router.push('/dashboard/student')}
                             className="px-8 py-3 rounded-full border border-white/20 hover:bg-white/10 transition-colors text-sm font-mono text-blue-300"
                         >
-                            // END TRANSMISSION
+                            {/* END TRANSMISSION */}
+                            END TRANSMISSION
                         </button>
                     </div>
 
