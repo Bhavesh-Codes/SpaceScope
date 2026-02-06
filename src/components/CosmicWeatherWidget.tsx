@@ -469,7 +469,7 @@ export default function CosmicWeatherWidget({ onBack }: { onBack: () => void }) 
                       <div className="space-y-6">
                         <div className="mb-4">
                           <h3 className="text-xl font-orbitron font-bold text-white mb-2">Earth Events</h3>
-                          <p className="text-sm text-slate-400">Natural events tracked by NASA's Earth Observatory</p>
+                          <p className="text-sm text-slate-400">Natural events tracked by NASA&apos;s Earth Observatory</p>
                         </div>
                         {eonetLoading ? (
                           <div className="flex items-center justify-center py-12">
