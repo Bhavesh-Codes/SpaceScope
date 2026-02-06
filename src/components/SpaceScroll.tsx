@@ -4,6 +4,13 @@ import React, { useRef, useEffect, useState } from 'react';
 import { useScroll, useTransform, useMotionValueEvent, motion, AnimatePresence } from 'framer-motion';
 import { Rocket, Globe, Zap, BookOpen, AlertTriangle, ChevronDown } from 'lucide-react';
 import { useSearchParams } from 'next/navigation';
+import { createBrowserClient } from '@supabase/ssr';
+
+// Initialize Supabase Client for auth checks
+const supabase = createBrowserClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+);
 
 const FRAME_COUNT = 192;
 
@@ -328,12 +335,35 @@ function BauhausMenu() {
 
     const MenuCard = ({ item, isWide = false }: { item: any, isWide?: boolean }) => (
         <button
-            onClick={() => {
+            onClick={async () => {
+                // Special handling for Learning Zone - check auth state
+                if (item.label === 'Learning Zone') {
+                    const { data: { user } } = await supabase.auth.getUser();
+
+                    if (!user) {
+                        // Not logged in - go to login
+                        window.location.href = '/login';
+                    } else {
+                        // Logged in - get role and redirect to appropriate dashboard
+                        const { data: profile } = await supabase
+                            .from('profiles')
+                            .select('role')
+                            .eq('id', user.id)
+                            .single();
+
+                        if (profile?.role === 'admin') {
+                            window.location.href = '/dashboard/admin';
+                        } else {
+                            window.location.href = '/dashboard/student';
+                        }
+                    }
+                    return;
+                }
+
                 const map: Record<string, string> = {
                     'Missions': '/missions',
                     'Earth Impact': '/earth-impact',
                     'Cosmic Weather': '/cosmic-weather',
-                    'Learning Zone': '/quiz',
                     'Celestial Events': '/celestial-events'
                 };
                 if (map[item.label]) window.location.href = map[item.label];

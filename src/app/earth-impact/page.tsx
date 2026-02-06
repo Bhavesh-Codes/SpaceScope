@@ -1,3 +1,8 @@
+// ==========================================
+// EARTH IMPACT PAGE
+// Route: /earth-impact
+// Shows: Earth monitoring, satellite data applications
+// ==========================================
 import React from 'react';
 import Link from 'next/link';
 import { CropHealthSection } from '@/components/earth-impact/CropHealthSection';
