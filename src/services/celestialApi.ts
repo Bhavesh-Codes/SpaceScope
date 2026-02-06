@@ -102,6 +102,41 @@ export async function fetchActiveComets(): Promise<CelestialEvent[]> {
 }
 
 // ============================================================================
+// EONET - Earth Observatory Natural Event Tracker
+// ============================================================================
+
+export interface EONETEvent {
+    id: string;
+    title: string;
+    description: string;
+    link: string;
+    categories: { id: string; title: string }[];
+    sources: { id: string; url: string }[];
+    geometry: { date: string; type: string; coordinates: number[] }[];
+}
+
+interface EONETParams {
+    status?: 'open' | 'closed' | 'all';
+    limit?: number;
+    days?: number;
+}
+
+export async function fetchEONETEvents(params: EONETParams = {}): Promise<EONETEvent[]> {
+    try {
+        const { status = 'open', limit = 50, days = 60 } = params;
+        const response = await fetch(`/api/eonet?status=${status}&limit=${limit}&days=${days}`);
+
+        if (!response.ok) throw new Error('Failed to fetch EONET events');
+
+        const data = await response.json();
+        return data.events || [];
+    } catch (error) {
+        console.error('Error fetching EONET events:', error);
+        return [];
+    }
+}
+
+// ============================================================================
 // Combined Fetch Function
 // ============================================================================
 

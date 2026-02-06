@@ -1,9 +1,10 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { AlertTriangle, Wind, Zap, Flame, AlertCircle, Menu, X, ChevronRight, Activity, Thermometer, Radio, Maximize2, Minimize2 } from 'lucide-react';
+import { AlertTriangle, Wind, Zap, Flame, AlertCircle, Menu, X, ChevronRight, Activity, Thermometer, Radio, Maximize2, Minimize2, Globe } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { fetchSolarFlares, fetchCMEEvents, fetchGeomagneticStorms, SolarFlare, CMEEvent, GeomagneticStorm, kpToGScale } from '@/services/nasaApi';
+import { fetchEONETEvents, EONETEvent } from '@/services/celestialApi';
 import SolarFlareChart from '@/components/charts/SolarFlareChart';
 import CMEChart from '@/components/charts/CMEChart';
 import GeomagneticStormChart from '@/components/charts/GeomagneticStormChart';
@@ -28,7 +29,9 @@ export default function CosmicWeatherWidget({ onBack }: { onBack: () => void }) 
   const [solarFlares, setSolarFlares] = useState<SolarFlare[]>([]);
   const [cmeEvents, setCmeEvents] = useState<CMEEvent[]>([]);
   const [geomagneticStorms, setGeomagneticStorms] = useState<GeomagneticStorm[]>([]);
+  const [eonetEvents, setEonetEvents] = useState<EONETEvent[]>([]);
   const [loading, setLoading] = useState(true);
+  const [eonetLoading, setEonetLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   // Fetch live data from NASA API
@@ -55,6 +58,24 @@ export default function CosmicWeatherWidget({ onBack }: { onBack: () => void }) 
     fetchData();
   }, []);
 
+  // Fetch EONET events when Earth tab is selected
+  useEffect(() => {
+    if (activeSection === 'earth' && eonetEvents.length === 0) {
+      const fetchEONET = async () => {
+        setEonetLoading(true);
+        try {
+          const events = await fetchEONETEvents({ status: 'open', limit: 50, days: 60 });
+          setEonetEvents(events);
+        } catch (error) {
+          console.error('Error fetching EONET events:', error);
+        } finally {
+          setEonetLoading(false);
+        }
+      };
+      fetchEONET();
+    }
+  }, [activeSection, eonetEvents.length]);
+
   const getSeverityColor = (severity: string) => {
     const level = severity?.toLowerCase() || '';
     if (level.includes('g5') || level.includes('x') || level === 'severe' || level === 'high') return 'text-red-500';
@@ -66,7 +87,8 @@ export default function CosmicWeatherWidget({ onBack }: { onBack: () => void }) 
     { id: 'dashboard', label: 'Overview', icon: Activity },
     { id: 'geomagnetic', label: 'Geomagnetic Storms', icon: Zap },
     { id: 'flares', label: 'Solar Flares', icon: Flame },
-    { id: 'cme', label: 'Coronal Mass Ejections', icon: Wind }
+    { id: 'cme', label: 'Coronal Mass Ejections', icon: Wind },
+    { id: 'earth', label: 'Earth Events', icon: Globe }
   ];
 
   const DataCard = ({ title, value, subtext, accentColor = "text-white", footer }: any) => (
@@ -438,6 +460,61 @@ export default function CosmicWeatherWidget({ onBack }: { onBack: () => void }) 
                           <button onClick={handleShowMore} className="w-full py-3 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 text-slate-400 hover:text-white transition-colors uppercase text-xs font-bold tracking-widest font-orbitron">
                             Show More Events
                           </button>
+                        )}
+                      </div>
+                    )}
+
+                    {/* EARTH EVENTS VIEW */}
+                    {activeSection === 'earth' && (
+                      <div className="space-y-6">
+                        <div className="mb-4">
+                          <h3 className="text-xl font-orbitron font-bold text-white mb-2">Earth Events</h3>
+                          <p className="text-sm text-slate-400">Natural events tracked by NASA's Earth Observatory</p>
+                        </div>
+                        {eonetLoading ? (
+                          <div className="flex items-center justify-center py-12">
+                            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-cyan-400" />
+                          </div>
+                        ) : (
+                          <>
+                            <div className={`grid gap-4 ${isExpanded ? 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4' : 'grid-cols-1'}`}>
+                              {eonetEvents.slice(0, visibleItems).map((event) => (
+                                <div key={event.id} className="group relative overflow-hidden rounded-2xl border border-white/10 bg-slate-900/50 backdrop-blur-md p-5 transition-all hover:bg-slate-800/50 hover:border-white/20">
+                                  <div className="mb-3">
+                                    <div className="flex items-start justify-between mb-2">
+                                      <span className="text-xs px-2 py-1 rounded-full bg-cyan-500/20 text-cyan-300 font-bold">
+                                        {event.categories[0]?.title || 'Event'}
+                                      </span>
+                                    </div>
+                                    <h4 className="text-lg font-orbitron font-bold text-white line-clamp-2">{event.title}</h4>
+                                  </div>
+                                  {event.description && (
+                                    <p className="text-sm text-slate-300 mb-3 line-clamp-3">{event.description}</p>
+                                  )}
+                                  <div className="border-t border-white/5 pt-3 mt-auto">
+                                    <div className="text-xs text-slate-500">
+                                      {event.geometry[0]?.date ? new Date(event.geometry[0].date).toLocaleDateString() : 'Date unknown'}
+                                    </div>
+                                    {event.sources[0]?.url && (
+                                      <a
+                                        href={event.sources[0].url}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="text-xs text-cyan-400 hover:text-cyan-300 underline mt-1 inline-block"
+                                      >
+                                        View Source
+                                      </a>
+                                    )}
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                            {eonetEvents.length > visibleItems && (
+                              <button onClick={handleShowMore} className="w-full py-3 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 text-slate-400 hover:text-white transition-colors uppercase text-xs font-bold tracking-widest font-orbitron">
+                                Show More Events
+                              </button>
+                            )}
+                          </>
                         )}
                       </div>
                     )}

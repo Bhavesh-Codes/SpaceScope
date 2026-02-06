@@ -5,7 +5,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import { AnimatePresence, motion } from 'framer-motion';
-import { Loader2, ChevronUp, ChevronDown, Calendar, X, Globe, Sparkles } from 'lucide-react';
+import { Loader2, ChevronUp, ChevronDown, Calendar, X, Globe, Sparkles, Moon } from 'lucide-react';
 
 import { CelestialEvent, CELESTIAL_EVENTS, getEventsByRegion } from '@/data/celestialEvents';
 import { fetchAllLiveCelestialEvents } from '@/services/celestialApi';
@@ -30,6 +30,18 @@ const AuroraGlobe = dynamic(() => import('./AuroraGlobe'), {
     )
 });
 
+const EclipseGlobe = dynamic(() => import('./EclipseGlobe'), {
+    ssr: false,
+    loading: () => (
+        <div className="w-full h-full bg-slate-950 flex items-center justify-center">
+            <div className="text-center">
+                <Loader2 className="w-8 h-8 animate-spin text-orange-400 mx-auto mb-2" />
+                <p className="text-slate-400 text-sm">Loading Eclipse Globe...</p>
+            </div>
+        </div>
+    )
+});
+
 export default function CelestialLayout() {
 
     const [selectedEvent, setSelectedEvent] = useState<CelestialEvent | null>(null);
@@ -42,8 +54,8 @@ export default function CelestialLayout() {
     // Drawer state
     const [drawerOpen, setDrawerOpen] = useState(true);
 
-    // Tab state: 'events' or 'aurora'
-    const [activeTab, setActiveTab] = useState<'events' | 'aurora'>('events');
+    // Tab state: 'events', 'aurora', or 'eclipses'
+    const [activeTab, setActiveTab] = useState<'events' | 'aurora' | 'eclipses'>('events');
 
     // Live data state
     const [liveEvents, setLiveEvents] = useState<CelestialEvent[]>([]);
@@ -120,11 +132,11 @@ export default function CelestialLayout() {
                 </div>
 
                 <div className="text-right">
-                    <h1 className="text-3xl font-orbitron font-bold leading-none">CELESTIAL<br />{activeTab === 'events' ? 'EVENTS' : 'AURORA'}</h1>
+                    <h1 className="text-3xl font-orbitron font-bold leading-none">CELESTIAL<br />{activeTab === 'events' ? 'EVENTS' : activeTab === 'aurora' ? 'AURORA' : 'ECLIPSES'}</h1>
                     <p className="text-xs text-slate-400 font-mono mt-1">
                         {activeTab === 'events'
                             ? (isMounted ? (userLocation ? `FILTERED: ${userLocation.name.toUpperCase()}` : "SELECT REGION") : "SELECT REGION")
-                            : "REAL-TIME AURORA"
+                            : activeTab === 'aurora' ? "REAL-TIME AURORA" : "ECLIPSE TRACKER"
                         }
                     </p>
                 </div>
@@ -156,8 +168,8 @@ export default function CelestialLayout() {
                     <button
                         onClick={() => setActiveTab('events')}
                         className={`flex items-center gap-2 px-4 py-2 rounded-full text-sm font-bold uppercase tracking-wider transition-all duration-300 ${activeTab === 'events'
-                                ? 'bg-gradient-to-r from-cyan-500 to-blue-500 text-white shadow-lg shadow-cyan-500/25'
-                                : 'text-slate-400 hover:text-white hover:bg-white/10'
+                            ? 'bg-gradient-to-r from-cyan-500 to-blue-500 text-white shadow-lg shadow-cyan-500/25'
+                            : 'text-slate-400 hover:text-white hover:bg-white/10'
                             }`}
                     >
                         <Globe className="w-4 h-4" />
@@ -166,12 +178,22 @@ export default function CelestialLayout() {
                     <button
                         onClick={() => setActiveTab('aurora')}
                         className={`flex items-center gap-2 px-4 py-2 rounded-full text-sm font-bold uppercase tracking-wider transition-all duration-300 ${activeTab === 'aurora'
-                                ? 'bg-gradient-to-r from-green-500 to-purple-500 text-white shadow-lg shadow-green-500/25'
-                                : 'text-slate-400 hover:text-white hover:bg-white/10'
+                            ? 'bg-gradient-to-r from-green-500 to-purple-500 text-white shadow-lg shadow-green-500/25'
+                            : 'text-slate-400 hover:text-white hover:bg-white/10'
                             }`}
                     >
                         <Sparkles className="w-4 h-4" />
                         Aurora
+                    </button>
+                    <button
+                        onClick={() => setActiveTab('eclipses')}
+                        className={`flex items-center gap-2 px-4 py-2 rounded-full text-sm font-bold uppercase tracking-wider transition-all duration-300 ${activeTab === 'eclipses'
+                            ? 'bg-gradient-to-r from-orange-500 to-red-500 text-white shadow-lg shadow-orange-500/25'
+                            : 'text-slate-400 hover:text-white hover:bg-white/10'
+                            }`}
+                    >
+                        <Moon className="w-4 h-4" />
+                        Eclipses
                     </button>
                 </div>
             </div>
@@ -204,7 +226,7 @@ export default function CelestialLayout() {
                         ) : (
                             <div className="flex-1 relative w-full bg-slate-950 animate-pulse" />
                         )
-                    ) : (
+                    ) : activeTab === 'aurora' ? (
                         // Aurora Tab - 3D Globe
                         <motion.div
                             key="aurora"
@@ -215,6 +237,18 @@ export default function CelestialLayout() {
                             transition={{ duration: 0.3 }}
                         >
                             <AuroraGlobe />
+                        </motion.div>
+                    ) : (
+                        // Eclipses Tab - Eclipse Globe
+                        <motion.div
+                            key="eclipses"
+                            className="flex-1 relative w-full h-full"
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            transition={{ duration: 0.3 }}
+                        >
+                            <EclipseGlobe />
                         </motion.div>
                     )}
                 </AnimatePresence>

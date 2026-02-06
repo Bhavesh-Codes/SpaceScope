@@ -50,11 +50,11 @@ export async function fetchCurrentKpIndex(): Promise<number> {
       'https://services.swpc.noaa.gov/products/noaa-planetary-k-index.json',
       { next: { revalidate: 900 } } // Cache for 15 minutes
     );
-    
+
     if (!response.ok) {
       throw new Error('Failed to fetch Kp index');
     }
-    
+
     const data = await response.json();
     // Data format: [["time_tag", "Kp", ...], ["2024-01-01 00:00:00", "2", ...]]
     if (data && data.length > 1) {
@@ -62,7 +62,7 @@ export async function fetchCurrentKpIndex(): Promise<number> {
       const kpValue = parseFloat(latestEntry[1]);
       return isNaN(kpValue) ? 2 : kpValue;
     }
-    
+
     return 2; // Default moderate activity
   } catch (error) {
     console.error('Error fetching Kp index:', error);
@@ -79,11 +79,11 @@ export async function fetchAuroraForecast(): Promise<AuroraForecast[]> {
       'https://services.swpc.noaa.gov/products/noaa-planetary-k-index-forecast.json',
       { next: { revalidate: 3600 } } // Cache for 1 hour
     );
-    
+
     if (!response.ok) {
       throw new Error('Failed to fetch aurora forecast');
     }
-    
+
     const data = await response.json();
     // Skip header row
     return data.slice(1).map((entry: string[]) => ({
@@ -104,11 +104,11 @@ export async function fetchAuroraData(): Promise<AuroraData> {
     fetchCurrentKpIndex(),
     fetchAuroraForecast(),
   ]);
-  
+
   // Calculate probability based on Kp index
   // Higher Kp = more visible aurora, further from poles
   const baseProbability = Math.min(100, kpIndex * 10 + 20);
-  
+
   return {
     kpIndex,
     forecast,
